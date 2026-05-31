@@ -49,7 +49,13 @@ async function triggerTrade(actionType, tradingSymbol, tradeVolume) {
     }
 }
 
-// Example: Trigger this function when your custom scan/upload buttons confirm a pattern
-// triggerTrade("BUY", "EURUSD", 0.1);
+<div class="trading-controls" style="text-align: center; margin-top: 20px;">
+    <button id="buyBtn" style="background-color: #2ecc71; color: white; padding: 15px 30px; font-size: 18px; border: none; border-radius: 5px; margin: 10px; cursor: pointer;">
+        BUY EURUSD
+    </button>
+    <button id="sellBtn" style="background-color: #e74c3c; color: white; padding: 15px 30px; font-size: 18px; border: none; border-radius: 5px; margin: 10px; cursor: pointer;">
+        SELL EURUSD
+    </button>
+</div>
 
 
