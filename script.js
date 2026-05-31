@@ -57,5 +57,63 @@ async function triggerTrade(actionType, tradingSymbol, tradeVolume) {
         SELL EURUSD
     </button>
 </div>
+let isEngineRunning = false;
+const masterBotBtn = document.getElementById('masterBotBtn');
+const botStatus = document.getElementById('botStatus');
+const liveLogWindow = document.getElementById('liveLogWindow');
+
+// Helper function to append timestamps and log text straight to your home screen
+function logToDashboard(message) {
+    const timestamp = new Date().toLocaleTimeString();
+    liveLogWindow.innerHTML += `<br>[${timestamp}] ${message}`;
+    // Automatically scroll down to the newest log entry
+    liveLogWindow.scrollTop = liveLogWindow.scrollHeight;
+}
+
+// Toggle logic for the fully automated loop
+masterBotBtn.addEventListener('click', async () => {
+    isEngineRunning = !isEngineRunning;
+    
+    if (isEngineRunning) {
+        botStatus.innerText = "AUTOMATING";
+        botStatus.style.color = "#2ecc71";
+        masterBotBtn.innerText = "SHUT DOWN ENGINE";
+        masterBotBtn.style.backgroundColor = "#e74c3c";
+        
+        logToDashboard("Connecting to cloud pipeline...");
+        logToDashboard("Strategy loaded: Moving Average Crossover (M15)");
+        logToDashboard("Automation background workers started.");
+        
+        // Signal your python backend to begin the automated loop
+        try {
+            await fetch(`${BOT_SERVER_URL}/start-robot`, { method: 'POST' });
+            logToDashboard("Python backend loop successfully linked.");
+        } catch (err) {
+            logToDashboard("ERROR: Could not broadcast signal to Python server.");
+        }
+    } else {
+        botStatus.innerText = "OFFLINE";
+        botStatus.style.color = "#e74c3c";
+        masterBotBtn.innerText = "START AUTOMATION ENGINE";
+        masterBotBtn.style.backgroundColor = "#2ecc71";
+        
+        logToDashboard("Halt sequence triggered.");
+        logToDashboard("Automated workers suspended safely.");
+        
+        try {
+            await fetch(`${BOT_SERVER_URL}/stop-robot`, { method: 'POST' });
+        } catch (err) {
+            console.log("Offline notice sent.");
+        }
+    }
+});
+
+// Optional: Simulate or fetch live performance tracking data updates
+function updateLiveProfit(amount) {
+    const profitElement = document.getElementById('botProfit');
+    profitElement.innerText = `$${amount.toFixed(2)}`;
+    profitElement.style.color = amount >= 0 ? "#2ecc71" : "#e74c3c";
+}
+
 
 

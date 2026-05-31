@@ -214,4 +214,28 @@
     </button>
 </div>
 </html>
+<div class="bot-dashboard" style="background: #111111; border: 2px solid #3498db; padding: 20px; border-radius: 12px; color: white; margin: 20px auto; max-width: 90%; font-family: 'Courier New', Courier, monospace;">
+    <h2 style="text-align: center; color: #3498db; margin-top: 0;">ALGO-BOT V1.0</h2>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; text-align: center;">
+        <div style="background: #1a1a1a; padding: 10px; border-radius: 6px;">
+            <span style="font-size: 12px; color: #888;">STATUS</span><br>
+            <strong id="botStatus" style="color: #e74c3c; font-size: 16px;">OFFLINE</strong>
+        </div>
+        <div style="background: #1a1a1a; padding: 10px; border-radius: 6px;">
+            <span style="font-size: 12px; color: #888;">TOTAL PROFIT</span><br>
+            <strong id="botProfit" style="color: #2ecc71; font-size: 16px;">$0.00</strong>
+        </div>
+    </div>
+
+    <button id="masterBotBtn" style="background-color: #2ecc71; color: white; padding: 15px; border: none; border-radius: 6px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 15px;">
+        START AUTOMATION ENGINE
+    </button>
+
+    <span style="font-size: 12px; color: #3498db;">LIVE ROBOT ACTIVITY LOG:</span>
+    <div id="liveLogWindow" style="background: #000; border: 1px solid #333; height: 120px; padding: 10px; border-radius: 6px; overflow-y: auto; font-size: 11px; color: #2ecc71; text-align: left; margin-top: 5px;">
+        [System] Engine initialized. Awaiting user start command...
+    </div>
+</div>
+
 
