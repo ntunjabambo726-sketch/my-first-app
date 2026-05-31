@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maritime Profit</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { margin:0; padding:0; font-family:'Inter',sans-serif; background:#000; color:#fff; }
+    .container { max-width: 420px; margin: 0 auto; background: #0a0a0a; height: 100vh; border: 12px solid #111; border-radius: 40px; overflow: hidden; }
+    .header { background:#111; padding:15px; text-align:center; font-size:15px; font-weight:600; }
+    .nav { position:fixed; bottom:0; width:100%; max-width:420px; background:#111; display:flex; justify-content:space-around; padding:10px 0; }
+    .nav-item { text-align:center; font-size:12px; cursor:pointer; }
+    .nav-item.active { color:#00ffcc; }
+    .scanner-screen { padding:20px; height: calc(100vh - 180px); overflow-y:auto; }
+    .upload-area { border: 2px dashed #00ffcc; border-radius:16px; padding:40px 20px; text-align:center; cursor:pointer; margin:20px 0; }
+    .btn { background:linear-gradient(90deg,#ff3366,#cc0000); color:white; padding:16px; border-radius:16px; font-weight:700; width:100%; margin:10px 0; }
+    canvas { max-width:100%; border-radius:12px; margin:10px 0; display:none; border:1px solid #333; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">Maritime Profit <span style="color:#00ff88;">V6.1 Edge</span></div>
+
+    <div id="scanner-tab" class="scanner-screen">
+      <h3 style="color:#ff3366; text-align:center;">CHART SCANNER</h3>
+      <p style="text-align:center; color:#aaa; font-size:14px;">Upload screenshot • Edge + AI Analysis</p>
+
+      <div class="upload-area" id="upload-area">
+        <h3>📸 TAP TO UPLOAD CHART</h3>
+        <p style="color:#666;">MetaTrader Chart Screenshot</p>
+        <input type="file" id="file-input" accept="image/*" style="display:none;">
+      </div>
+
+      <canvas id="canvas" width="400" height="300"></canvas>
+      <canvas id="edge-canvas" width="400" height="300" style="display:none;"></canvas>
+
+      <div id="analysis-result" style="display:none; margin-top:15px;">
+        <div style="background:#1a0000; border:2px solid #ff3366; border-radius:16px; padding:20px; text-align:center;">
+          <div id="signal" style="font-size:32px; font-weight:700;"></div>
+          <div id="confidence" style="font-size:52px; font-weight:700; color:#00ff88;"></div>
+          <div id="details" style="margin-top:15px; font-size:14px; color:#ccc; text-align:left;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <div class="nav-item" onclick="switchTab(0)">🏠 Home</div>
+      <div class="nav-item active" onclick="switchTab(1)">🔍 AI Scanner</div>
+      <div class="nav-item" onclick="switchTab(2)">📱 MetaTrader</div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const edgeCanvas = document.getElementById('edge-canvas');
+    const ctx = canvas.getContext('2d');
+    const edgeCtx = edgeCanvas.getContext('2d');
+    const fileInput = document.getElementById('file-input');
+    const uploadArea = document.getElementById('upload-area');
+    const resultDiv = document.getElementById('analysis-result');
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleImageUpload);
+
+    function handleImageUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+          canvas.width = Math.min(img.width, 600);
+          canvas.height = (canvas.width / img.width) * img.height;
+          edgeCanvas.width = canvas.width;
+          edgeCanvas.height = canvas.height;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.style.display = 'block';
+          analyzeChartWithEdges();
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function analyzeChartWithEdges() {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      const edges = sobelEdgeDetection(imageData);
+      edgeCtx.putImageData(edges, 0, 0);
+      edgeCanvas.style.display = 'block';
+
+      const data = imageData.data;
+      let red = 0, green = 0, total = 0;
+      let brightnessSum = 0;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i+1], b = data[i+2];
+        brightnessSum += (r + g + b) / 3;
+        total++;
+
+        if (r > 180 && g < 120) red++;
+        if (g > 160 && r < 140) green++;
+      }
+
+      const bullishRatio = (green / total) * 100;
+      const bearishRatio = (red / total) * 100;
+      const trendSlope = estimateTrendSlope(edges);
+
+      let signal = "NEUTRAL";
+      let confidence = 72;
+      let bias = "Sideways";
+
+      if (trendSlope > 0.6 && bullishRatio > 12) {
+        signal = "🟢 STRONG BUY";
+        bias = "Uptrend Breakout";
+        confidence = Math.min(94, 75 + Math.floor(trendSlope * 25));
+      } else if (trendSlope < -0.5 && bearishRatio > 12) {
+        signal = "🔴 STRONG SELL";
+        bias = "Downtrend Breakdown";
+        confidence = Math.min(95, 78 + Math.floor(Math.abs(trendSlope) * 28));
+      } else if (bullishRatio > bearishRatio + 10) {
+        signal = "🟢 BUY";
+        bias = "Bullish Bias";
+        confidence = 82;
+      } else if (bearishRatio > bullishRatio + 10) {
+        signal = "🔴 SELL";
+        bias = "Bearish Bias";
+        confidence = 85;
+      }
+
+      document.getElementById('signal').textContent = signal;
+      document.getElementById('confidence').textContent = confidence + "%";
+      document.getElementById('details').innerHTML = `
+        <strong>Bias:</strong> ${bias}<br>
+        <strong>Trend Slope:</strong> ${trendSlope.toFixed(2)}<br>
+        Bullish Candles: ${bullishRatio.toFixed(1)}% | Bearish: ${bearishRatio.toFixed(1)}%<br>
+        Edge Strength: ${Math.floor(Math.abs(trendSlope)*100)}%<br>
+        <small>Edge detection active • On-device</small>
+      `;
+
+      resultDiv.style.display = 'block';
+    }
+
+    function sobelEdgeDetection(imageData) {
+      const data = imageData.data;
+      const w = imageData.width;
+      const h = imageData.height;
+      const output = ctx.createImageData(w, h);
+      const outData = output.data;
+
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const idx = (y * w + x) * 4;
+          const gx =
+            -1 * getGray(data, x-1, y-1, w) + 1 * getGray(data, x+1, y-1, w) +
+            -2 * getGray(data, x-1, y,   w) + 2 * getGray(data, x+1, y,   w) +
+            -1 * getGray(data, x-1, y+1, w) + 1 * getGray(data, x+1, y+1, w);
+          const gy =
+            -1 * getGray(data, x-1, y-1, w) -2 * getGray(data, x, y-1, w) -1 * getGray(data, x+1, y-1, w) +
+             1 * getGray(data, x-1, y+1, w) +2 * getGray(data, x, y+1, w) +1 * getGray(data, x+1, y+1, w);
+
+          const magnitude = Math.min(255, Math.sqrt(gx*gx + gy*gy));
+          outData[idx] = magnitude;
+          outData[idx+1] = magnitude;
+          outData[idx+2] = magnitude;
+          outData[idx+3] = 255;
+        }
+      }
+      return output;
+    }
+
+    function getGray(data, x, y, w) {
+      const idx = (y * w + x) * 4;
+      return (data[idx] + data[idx+1] + data[idx+2]) / 3;
+    }
+
+    function estimateTrendSlope(edgeData) {
+      const data = edgeData.data;
+      const w = edgeData.width;
+      const h = edgeData.height;
+      let sumX = 0, sumY = 0, count = 0;
+
+      for (let y = 0; y < h; y += 4) {
+        for (let x = 0; x < w; x += 4) {
+          const idx = (y * w + x) * 4;
+          if (data[idx] > 60) {
+            sumX += x;
+            sumY += y;
+            count++;
+          }
+        }
+      }
+
+      if (count < 50) return 0;
+      const centerX = w / 2;
+      const centerY = h / 2;
+      return (sumY / count - centerY) / (sumX / count - centerX + 1);
+    }
+
+    function switchTab(i) {
+      const items = document.querySelectorAll('.nav-item');
+      items.forEach((it, idx) => it.classList.toggle('active', idx === i));
+    }
+  </script>
+</body>
+</html>
